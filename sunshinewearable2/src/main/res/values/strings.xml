@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">Sunshine Wearable</string>
+    <string name="my_digital_name">My Digital</string>
+    <string name="sunshine_watch_face_label">Sunshine WatchFace</string>
+</resources>
