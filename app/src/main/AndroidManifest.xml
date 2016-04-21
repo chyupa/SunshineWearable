@@ -183,6 +183,19 @@
         <service
             android:name=".gcm.RegistrationIntentService"
             android:exported="false"></service>
+
+        <service
+            android:name=".wearable.WearableService"
+            android:enabled="true"
+            android:exported="true" >
+            <intent-filter>
+                <action android:name="android.content.SyncAdapter" />
+            </intent-filter>
+
+            <meta-data
+                android:name="android.content.SyncAdapter"
+                android:resource="@xml/wear_syncadapter" />
+        </service>
     </application>
 
 </manifest>

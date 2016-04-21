@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.udacity.sunshinewearable;
+package com.example.android.sunshine.app;
 
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -25,9 +25,11 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.Rect;
 import android.graphics.Typeface;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
@@ -37,19 +39,21 @@ import android.support.wearable.watchface.CanvasWatchFaceService;
 import android.support.wearable.watchface.WatchFaceStyle;
 import android.text.format.Time;
 import android.util.Log;
-import android.util.TypedValue;
 import android.view.SurfaceHolder;
 import android.view.WindowInsets;
 
-import com.example.android.sunshine.app.R;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.wearable.Asset;
 import com.google.android.gms.wearable.DataApi;
 import com.google.android.gms.wearable.DataEvent;
 import com.google.android.gms.wearable.DataEventBuffer;
 import com.google.android.gms.wearable.DataMapItem;
+import com.google.android.gms.wearable.Node;
 import com.google.android.gms.wearable.Wearable;
+import com.example.android.sunshine.app.R;
 
+import java.io.InputStream;
 import java.lang.ref.WeakReference;
 import java.text.SimpleDateFormat;
 import java.util.TimeZone;
@@ -79,36 +83,40 @@ public class SunshineWatchFace extends CanvasWatchFaceService
 
     String data[] = {};
     double maxTemp = 20;
-    Bitmap image = null;
+    Bitmap mBitmap = null;
     String weatherDescription = "";
+    boolean dataReceived = false;
 
     @Override
     public Engine onCreateEngine() {
-        Log.d("WEAR", "here engine d");
+        mGoogleApiClient = new GoogleApiClient.Builder(this)
+                .addConnectionCallbacks(this)
+                .addOnConnectionFailedListener(this)
+                .addApi(Wearable.API)
+                .build();
+
+        mGoogleApiClient.connect();
         return new Engine();
     }
 
     @Override
     public void onConnected(@Nullable Bundle bundle) {
-        Log.d("WEAR", "here 5");
         Wearable.DataApi.addListener(mGoogleApiClient, new DataApi.DataListener() {
             @Override
             public void onDataChanged(DataEventBuffer dataEventBuffer) {
-                Log.d("WEAR", "here 4");
                 for (DataEvent event : dataEventBuffer) {
                     String eventUri = event.getDataItem().getUri().toString();
 
                     if (eventUri.contains("/wearable")) {
-                        Log.d("WEAR", "here wr");
                         DataMapItem dataItem = DataMapItem.fromDataItem(event.getDataItem());
-                        byte[] byteArray = dataItem.getDataMap().getByteArray("image");
-                        image = BitmapFactory.decodeByteArray(byteArray, 100, byteArray.length);
-                        image = BitmapFactory.decodeResource(SunshineWatchFace.this.getResources(), R.drawable.sun);
+                        Asset profileAsset = dataItem.getDataMap().getAsset("image");
+                        new GetAssetFromDataItem(profileAsset).execute();
 
                         data = dataItem.getDataMap().getStringArray("information");
                         maxTemp = Double.valueOf(data[0]);
                         weatherDescription = data[1];
-                        Log.d("WEAR Descrption", weatherDescription);
+
+                        dataReceived = true;
                     }
                 }
             }
@@ -122,7 +130,43 @@ public class SunshineWatchFace extends CanvasWatchFaceService
 
     @Override
     public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
+    }
 
+    class GetAssetFromDataItem extends AsyncTask<Asset, Void, Bitmap> {
+
+        private final Asset asset;
+
+        public GetAssetFromDataItem(Asset asset) {
+            this.asset = asset;
+        }
+
+        @Override
+        protected Bitmap doInBackground(Asset... assets) {
+            mBitmap = getResizedBitmap(loadBitmapFromAsset(this.asset), 40, 40);
+            return mBitmap;
+        }
+    }
+
+    public Bitmap loadBitmapFromAsset(Asset asset) {
+        if (asset == null) {
+            throw new IllegalArgumentException("Asset must be non-null");
+        }
+        ConnectionResult result =
+                mGoogleApiClient.blockingConnect(6000, TimeUnit.MILLISECONDS);
+        if (!result.isSuccess()) {
+            return null;
+        }
+        // convert asset into a file descriptor and block until it's ready
+        InputStream assetInputStream = Wearable.DataApi.getFdForAsset(
+                mGoogleApiClient, asset).await().getInputStream();
+        mGoogleApiClient.disconnect();
+
+        if (assetInputStream == null) {
+            Log.w("WEAR", "Requested an unknown Asset.");
+            return null;
+        }
+        // decode the stream into a bitmap
+        return BitmapFactory.decodeStream(assetInputStream);
     }
 
 
@@ -161,8 +205,7 @@ public class SunshineWatchFace extends CanvasWatchFaceService
             @Override
             public void onReceive(Context context, Intent intent) {
                 mTime.clear(intent.getStringExtra("time-zone"));
-//                mTime.setToNow();
-                invalidate();
+                mTime.setToNow();
             }
         };
         int mTapCount;
@@ -180,10 +223,11 @@ public class SunshineWatchFace extends CanvasWatchFaceService
         float mTempXOffset;
         float mTempYOffset;
 
-        float mImageHeight;
-        float mImageWidth;
         float mImageXOffset;
         float mImageYOffset;
+
+        float mWeatherDescriptionXOffset;
+        float mWeatherDescriptionYOffset;
 
 
         /**
@@ -194,7 +238,6 @@ public class SunshineWatchFace extends CanvasWatchFaceService
 
         @Override
         public void onCreate(SurfaceHolder holder) {
-            Log.d("WEAR", "here 2");
             super.onCreate(holder);
 
             setWatchFaceStyle(new WatchFaceStyle.Builder(SunshineWatchFace.this)
@@ -236,8 +279,6 @@ public class SunshineWatchFace extends CanvasWatchFaceService
         }
 
         private Paint createTextPaint(int textColor) {
-            Log.d("WEAR", "here 3");
-
             Paint paint = new Paint();
             paint.setColor(textColor);
             paint.setTypeface(NORMAL_TYPEFACE);
@@ -254,7 +295,7 @@ public class SunshineWatchFace extends CanvasWatchFaceService
 
                 // Update time zone in case it changed while we weren't visible.
                 mTime.clear(TimeZone.getDefault().getID());
-//                mTime.setToNow();
+                mTime.setToNow();
             } else {
                 unregisterReceiver();
             }
@@ -316,6 +357,9 @@ public class SunshineWatchFace extends CanvasWatchFaceService
 
             float weatherSize = resources.getDimension(R.dimen.weather_size);
             mImagePaint.setTextSize(weatherSize);
+
+            mWeatherDescriptionXOffset = resources.getDimension(R.dimen.weather_description_x_offset);
+            mWeatherDescriptionYOffset = resources.getDimension(R.dimen.weather_description_y_offset);
         }
 
         @Override
@@ -389,25 +433,29 @@ public class SunshineWatchFace extends CanvasWatchFaceService
             String date = shortenedDateFormat.format(currentTime);
             canvas.drawText(date.toUpperCase(), mDateXOffset, mDateYOffset, mDatePaint);
 
-            canvas.drawLine(
-                    mDelimiterXOffset,
-                    mDelimiterYOffset,
-                    mDelimiterXOffset + mDelimiterLength,
-                    mDelimiterYOffset,
-                    mDelimiterPaint
-                    );
+            if (dataReceived) {
 
-            String temp = String.format(getString(R.string.format_temperature), maxTemp);
-            canvas.drawText(temp, mTempXOffset, mTempYOffset, mTempPaint);
+                canvas.drawLine(
+                        mDelimiterXOffset,
+                        mDelimiterYOffset,
+                        mDelimiterXOffset + mDelimiterLength,
+                        mDelimiterYOffset,
+                        mDelimiterPaint
+                );
 
-            if (isInAmbientMode()) {
-                String weather = "sunny";
-                canvas.drawText(weatherDescription, mImageXOffset, mImageYOffset, mImagePaint);
-            } else {
-                Bitmap bitmap = BitmapFactory.decodeResource(getResources(), R.drawable.sun);
-                canvas.drawBitmap(bitmap, mImageXOffset, mImageYOffset, mImagePaint);
+                if (isInAmbientMode()) {
+
+                    String temp = String.format(getString(R.string.format_temperature), maxTemp);
+                    canvas.drawText(temp, mTempXOffset, mTempYOffset, mTempPaint);
+
+                    canvas.drawText(weatherDescription, mWeatherDescriptionXOffset, mWeatherDescriptionYOffset, mImagePaint);
+
+                } else {
+                    canvas.drawBitmap(mBitmap, mImageXOffset, mImageYOffset, mImagePaint);
+                    String temp = String.format(getString(R.string.format_temperature), maxTemp);
+                    canvas.drawText(temp, mTempXOffset, mTempYOffset, mTempPaint);
+                }
             }
-
         }
 
         /**
@@ -441,5 +489,25 @@ public class SunshineWatchFace extends CanvasWatchFaceService
                 mUpdateTimeHandler.sendEmptyMessageDelayed(MSG_UPDATE_TIME, delayMs);
             }
         }
+    }
+
+    public Bitmap getResizedBitmap(Bitmap bitmap, int newHeight, int newWidth)
+    {
+        int width = bitmap.getWidth();
+        int height = bitmap.getHeight();
+        Log.e("WEAR - bitmap w", String.valueOf(width));
+        Log.e("WEAR - bitmap h", String.valueOf(height));
+        float scaleWidth = ((float) newWidth) / width;
+        float scaleHeight = ((float) newHeight) / height;
+        // create a matrix for the manipulation
+        Matrix matrix = new Matrix();
+        // resize the bit map
+        matrix.postScale(scaleWidth, scaleHeight);
+        // recreate the new Bitmap
+        Bitmap resizedBitmap = Bitmap.createBitmap(bitmap, 0, 0, width, height, matrix, false);
+
+        Log.e("WEAR - bitmap w", String.valueOf(resizedBitmap.getWidth()));
+        Log.e("WEAR - bitmap h", String.valueOf(resizedBitmap.getHeight()));
+        return resizedBitmap;
     }
 }
