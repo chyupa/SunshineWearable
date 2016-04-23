@@ -36,6 +36,7 @@ import com.example.android.sunshine.app.R;
 import com.example.android.sunshine.app.Utility;
 import com.example.android.sunshine.app.data.WeatherContract;
 import com.example.android.sunshine.app.muzei.WeatherMuzeiSource;
+import com.example.android.sunshine.app.wearable.WearableService;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -58,9 +59,10 @@ public class SunshineSyncAdapter extends AbstractThreadedSyncAdapter {
             "com.example.android.sunshine.app.ACTION_DATA_UPDATED";
     // Interval at which to sync with the weather, in seconds.
     // 60 seconds (1 minute) * 180 = 3 hours
-    public static final int SYNC_INTERVAL = 60 * 3;
+    public static final int SYNC_INTERVAL = 60 * 1;
     public static final int SYNC_FLEXTIME = SYNC_INTERVAL/3;
-    private static final long DAY_IN_MILLIS = 1000 * 60 * 60 * 24;
+//    private static final long DAY_IN_MILLIS = 1000 * 60 * 60 * 24;
+    private static final long DAY_IN_MILLIS = 1000 * 60 * 1;
     private static final int WEATHER_NOTIFICATION_ID = 3004;
 
 
@@ -371,7 +373,12 @@ public class SunshineSyncAdapter extends AbstractThreadedSyncAdapter {
                 notifyWeather();
             }
             Log.d(LOG_TAG, "Sync Complete. " + cVVector.size() + " Inserted");
+//            context.startService(new Intent(String.valueOf(WearableService.class)));
+
+//            startService(new Intent(this, WearableService.class));
             setLocationStatus(getContext(), LOCATION_STATUS_OK);
+//            context.startService(new Intent(ACTION_DATA_UPDATED)
+//                    .setClass(context, WearableService.class));
 
         } catch (JSONException e) {
             Log.e(LOG_TAG, e.getMessage(), e);

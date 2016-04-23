@@ -40,12 +40,14 @@ public class WearableService extends Service
     private static final String[] WEATHER_INFORMATION = new String[] {
             WeatherContract.WeatherEntry.COLUMN_WEATHER_ID,
             WeatherContract.WeatherEntry.COLUMN_MAX_TEMP,
+            WeatherContract.WeatherEntry.COLUMN_MIN_TEMP,
             WeatherContract.WeatherEntry.COLUMN_SHORT_DESC
     };
 
     private final static int COL_WEATHER_ID = 0;
     private final static int COL_MAX_TEMP = 1;
-    private final static int COL_SHORT_DESC = 2;
+    private final static int COL_MIN_TEMP = 2;
+    private final static int COL_SHORT_DESC = 3;
 
     @Override
     public void onCreate() {
@@ -63,8 +65,8 @@ public class WearableService extends Service
     public void onConnected(Bundle bundle) {
 
         double high = 0;
+        double min = 0;
         String shortDesc = "";
-        byte[] byteArray = null;
         Bitmap image = null;
 
         String locationQuery = Utility.getPreferredLocation(getApplicationContext());
@@ -76,6 +78,7 @@ public class WearableService extends Service
         if (cursor.moveToFirst()) {
             int weatherId = cursor.getInt(COL_WEATHER_ID);
             high = cursor.getDouble(COL_MAX_TEMP);
+            min = cursor.getDouble(COL_MIN_TEMP);
             shortDesc = cursor.getString(COL_SHORT_DESC);
 
             int iconId = Utility.getIconResourceForWeatherCondition(weatherId);
@@ -83,7 +86,7 @@ public class WearableService extends Service
             image = BitmapFactory.decodeResource(resources, iconId);
         }
 
-        String[] info = new String[]{Double.toString(high), shortDesc};
+        String[] info = new String[]{Double.toString(high), Double.toString(min), shortDesc};
         new WeatherAsyncTask(info, image).execute();
 
     }
@@ -103,7 +106,13 @@ public class WearableService extends Service
             PutDataMapRequest putDataMapRequest = PutDataMapRequest.create("/wearable");
             putDataMapRequest.getDataMap().putStringArray("information", this.info);
             putDataMapRequest.getDataMap().putLong("time", new Date().getTime());
-            Asset asset = createAssetFromBitmap(this.image);
+            Asset asset = null;
+
+            try {
+                asset = createAssetFromBitmap(this.image);
+            } catch (Exception e) {
+                Log.e("EXCEPTION", e.getMessage());
+            }
             putDataMapRequest.getDataMap().putAsset("image", asset);
 
             PutDataRequest request = putDataMapRequest.asPutDataRequest();
