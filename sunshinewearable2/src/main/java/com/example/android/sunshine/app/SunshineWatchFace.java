@@ -49,9 +49,7 @@ import com.google.android.gms.wearable.DataApi;
 import com.google.android.gms.wearable.DataEvent;
 import com.google.android.gms.wearable.DataEventBuffer;
 import com.google.android.gms.wearable.DataMapItem;
-import com.google.android.gms.wearable.Node;
 import com.google.android.gms.wearable.Wearable;
-import com.example.android.sunshine.app.R;
 
 import java.io.InputStream;
 import java.lang.ref.WeakReference;
@@ -83,8 +81,8 @@ public class SunshineWatchFace extends CanvasWatchFaceService
 
     String data[] = {};
     double maxTemp = 20;
+    double minTemp = 10;
     Bitmap mBitmap = null;
-    String weatherDescription = "";
     boolean dataReceived = false;
 
     @Override
@@ -114,7 +112,7 @@ public class SunshineWatchFace extends CanvasWatchFaceService
 
                         data = dataItem.getDataMap().getStringArray("information");
                         maxTemp = Double.valueOf(data[0]);
-                        weatherDescription = data[1];
+                        minTemp = Double.valueOf(data[1]);
 
                         dataReceived = true;
                     }
@@ -142,7 +140,7 @@ public class SunshineWatchFace extends CanvasWatchFaceService
 
         @Override
         protected Bitmap doInBackground(Asset... assets) {
-            mBitmap = getResizedBitmap(loadBitmapFromAsset(this.asset), 40, 40);
+            mBitmap = getResizedBitmap(loadBitmapFromAsset(this.asset), 50, 50);
             return mBitmap;
         }
     }
@@ -197,7 +195,8 @@ public class SunshineWatchFace extends CanvasWatchFaceService
         Paint mTextPaint;
         Paint mDatePaint;
         Paint mDelimiterPaint;
-        Paint mTempPaint;
+        Paint mTempMaxPaint;
+        Paint mTempMinPaint;
         Paint mImagePaint;
         boolean mAmbient;
         Time mTime;
@@ -220,15 +219,14 @@ public class SunshineWatchFace extends CanvasWatchFaceService
         float mDelimiterXOffset;
         float mDelimiterYOffset;
 
-        float mTempXOffset;
-        float mTempYOffset;
+        float mTempMaxXOffset;
+        float mTempMaxYOffset;
+
+        float mTempMinXOffset;
+        float mTempMinYOffset;
 
         float mImageXOffset;
         float mImageYOffset;
-
-        float mWeatherDescriptionXOffset;
-        float mWeatherDescriptionYOffset;
-
 
         /**
          * Whether the display supports fewer bits for each color in ambient mode. When true, we
@@ -239,6 +237,10 @@ public class SunshineWatchFace extends CanvasWatchFaceService
         @Override
         public void onCreate(SurfaceHolder holder) {
             super.onCreate(holder);
+
+//            if (dataReceived) {
+//                invalidate();
+//            }
 
             setWatchFaceStyle(new WatchFaceStyle.Builder(SunshineWatchFace.this)
                     .setCardPeekMode(WatchFaceStyle.PEEK_MODE_VARIABLE)
@@ -263,13 +265,17 @@ public class SunshineWatchFace extends CanvasWatchFaceService
             mDelimiterPaint = new Paint();
             mDelimiterPaint.setColor(resources.getColor(R.color.digital_date));
 
-            mTempPaint = new Paint();
-            mTempPaint = createTextPaint(resources.getColor(R.color.digital_text));
+            mTempMaxPaint = new Paint();
+            mTempMaxPaint = createTextPaint(resources.getColor(R.color.digital_text));
+
+            mTempMinPaint = new Paint();
+            mTempMinPaint = createTextPaint(resources.getColor(R.color.digital_text));
 
             mImagePaint = new Paint();
             mImagePaint = createTextPaint(resources.getColor(R.color.digital_text));
 
             mTime = new Time();
+
         }
 
         @Override
@@ -346,20 +352,27 @@ public class SunshineWatchFace extends CanvasWatchFaceService
             mDelimiterYOffset = resources.getDimension(R.dimen.delimiter_y_offset);
             mDelimiterLength = resources.getDimension(R.dimen.delimiter_w);
 
-            mTempXOffset = resources.getDimension(R.dimen.temp_x_offset);
-            mTempYOffset = resources.getDimension(R.dimen.temp_y_offset);
+            mTempMaxXOffset = resources.getDimension(isRound
+                    ? R.dimen.temp_max_x_offset_round : R.dimen.temp_max_x_offset);
+            mTempMaxYOffset = resources.getDimension(isRound
+                    ? R.dimen.temp_max_y_offset_round : R.dimen.temp_max_y_offset);
 
-            float tempSize = resources.getDimension(R.dimen.temp_size);
-            mTempPaint.setTextSize(tempSize);
+            float tempMaxSize = resources.getDimension(R.dimen.temp_size);
+            mTempMaxPaint.setTextSize(tempMaxSize);
 
-            mImageXOffset = resources.getDimension(R.dimen.image_x_offset);
-            mImageYOffset = resources.getDimension(R.dimen.image_y_offset);
+            mTempMinXOffset = resources.getDimension(isRound
+                    ? R.dimen.temp_min_x_offset_round : R.dimen.temp_min_x_offset);
+            mTempMinYOffset = resources.getDimension(isRound
+                    ? R.dimen.temp_min_y_offset_round : R.dimen.temp_min_y_offset);
 
-            float weatherSize = resources.getDimension(R.dimen.weather_size);
-            mImagePaint.setTextSize(weatherSize);
+            float tempMinSize = resources.getDimension(R.dimen.temp_size);
+            mTempMinPaint.setTextSize(tempMinSize);
 
-            mWeatherDescriptionXOffset = resources.getDimension(R.dimen.weather_description_x_offset);
-            mWeatherDescriptionYOffset = resources.getDimension(R.dimen.weather_description_y_offset);
+            mImageXOffset = resources.getDimension(isRound
+                    ? R.dimen.image_x_offset_round : R.dimen.image_x_offset);
+            mImageYOffset = resources.getDimension(isRound
+                    ? R.dimen.image_y_offset_round : R.dimen.image_y_offset);
+
         }
 
         @Override
@@ -443,18 +456,15 @@ public class SunshineWatchFace extends CanvasWatchFaceService
                         mDelimiterPaint
                 );
 
-                if (isInAmbientMode()) {
-
-                    String temp = String.format(getString(R.string.format_temperature), maxTemp);
-                    canvas.drawText(temp, mTempXOffset, mTempYOffset, mTempPaint);
-
-                    canvas.drawText(weatherDescription, mWeatherDescriptionXOffset, mWeatherDescriptionYOffset, mImagePaint);
-
-                } else {
+                if (!isInAmbientMode()) {
                     canvas.drawBitmap(mBitmap, mImageXOffset, mImageYOffset, mImagePaint);
-                    String temp = String.format(getString(R.string.format_temperature), maxTemp);
-                    canvas.drawText(temp, mTempXOffset, mTempYOffset, mTempPaint);
                 }
+
+                String maxTemp = String.format(getString(R.string.format_temperature), SunshineWatchFace.this.maxTemp);
+                canvas.drawText(maxTemp, mTempMaxXOffset, mTempMaxYOffset, mTempMaxPaint);
+
+                String minTemp = String.format(getString(R.string.format_temperature), SunshineWatchFace.this.minTemp);
+                canvas.drawText(minTemp, mTempMinXOffset, mTempMinYOffset, mTempMinPaint);
             }
         }
 

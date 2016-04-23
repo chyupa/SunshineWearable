@@ -188,13 +188,14 @@
             android:name=".wearable.WearableService"
             android:enabled="true"
             android:exported="true" >
-            <intent-filter>
-                <action android:name="android.content.SyncAdapter" />
-            </intent-filter>
+            <!--<intent-filter>-->
+                <!--<action android:name="android.content.SyncAdapter" />-->
+            <!--</intent-filter>-->
 
-            <meta-data
-                android:name="android.content.SyncAdapter"
-                android:resource="@xml/wear_syncadapter" />
+            <!--<meta-data-->
+                <!--android:name="android.content.SyncAdapter"-->
+                <!--android:resource="@xml/wear_syncadapter" />-->
+
         </service>
     </application>
 

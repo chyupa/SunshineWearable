@@ -86,6 +86,8 @@ public class WearableService extends Service
             image = BitmapFactory.decodeResource(resources, iconId);
         }
 
+        cursor.close();
+
         String[] info = new String[]{Double.toString(high), Double.toString(min), shortDesc};
         new WeatherAsyncTask(info, image).execute();
 

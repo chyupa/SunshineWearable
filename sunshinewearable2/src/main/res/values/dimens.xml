@@ -6,7 +6,7 @@
     <dimen name="digital_date_size">15dp</dimen>
     <dimen name="digital_date_size_round">20dp</dimen>
 
-    <dimen name="digital_x_offset">40dp</dimen>
+    <dimen name="digital_x_offset">20dp</dimen>
     <dimen name="digital_x_offset_round">60dp</dimen>
     <dimen name="digital_y_offset">80dp</dimen>
 
@@ -18,14 +18,23 @@
     <dimen name="delimiter_x_offset">95dp</dimen>
     <dimen name="delimiter_w">40dp</dimen>
 
-    <dimen name="temp_y_offset">160dp</dimen>
-    <dimen name="temp_x_offset">95dp</dimen>
+    <dimen name="temp_max_y_offset">150dp</dimen>
+    <dimen name="temp_max_x_offset">60dp</dimen>>
+
+    <dimen name="temp_max_y_offset_round">150dp</dimen>
+    <dimen name="temp_max_x_offset_round">90dp</dimen>>
+
+    <dimen name="temp_min_x_offset">110dp</dimen>
+    <dimen name="temp_min_y_offset">150dp</dimen>
+
+    <dimen name="temp_min_x_offset_round">140dp</dimen>
+    <dimen name="temp_min_y_offset_round">150dp</dimen>
+
     <dimen name="temp_size">30dp</dimen>
 
-    <dimen name="image_y_offset">138dp</dimen>
-    <dimen name="image_x_offset">70dp</dimen>
-    <dimen name="weather_size">30dp</dimen>
+    <dimen name="image_y_offset">125dp</dimen>
+    <dimen name="image_y_offset_round">125dp</dimen>
+    <dimen name="image_x_offset">30dp</dimen>
+    <dimen name="image_x_offset_round">60dp</dimen>
 
-    <dimen name="weather_description_y_offset">200dp</dimen>
-    <dimen name="weather_description_x_offset">90dp</dimen>
 </resources>
