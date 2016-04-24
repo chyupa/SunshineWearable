@@ -83,7 +83,7 @@ public class SunshineWatchFace extends CanvasWatchFaceService
     double maxTemp = 20;
     double minTemp = 10;
     Bitmap mBitmap = null;
-    boolean dataReceived = false;
+
 
     @Override
     public Engine onCreateEngine() {
@@ -113,8 +113,6 @@ public class SunshineWatchFace extends CanvasWatchFaceService
                         data = dataItem.getDataMap().getStringArray("information");
                         maxTemp = Double.valueOf(data[0]);
                         minTemp = Double.valueOf(data[1]);
-
-                        dataReceived = true;
                     }
                 }
             }
@@ -237,10 +235,6 @@ public class SunshineWatchFace extends CanvasWatchFaceService
         @Override
         public void onCreate(SurfaceHolder holder) {
             super.onCreate(holder);
-
-//            if (dataReceived) {
-//                invalidate();
-//            }
 
             setWatchFaceStyle(new WatchFaceStyle.Builder(SunshineWatchFace.this)
                     .setCardPeekMode(WatchFaceStyle.PEEK_MODE_VARIABLE)
@@ -446,8 +440,8 @@ public class SunshineWatchFace extends CanvasWatchFaceService
             String date = shortenedDateFormat.format(currentTime);
             canvas.drawText(date.toUpperCase(), mDateXOffset, mDateYOffset, mDatePaint);
 
-            if (dataReceived) {
-
+            //check if the image exists and draw the rest of the information
+            if (mBitmap != null) {
                 canvas.drawLine(
                         mDelimiterXOffset,
                         mDelimiterYOffset,
